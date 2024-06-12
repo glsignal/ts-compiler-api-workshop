@@ -1,37 +1,18 @@
 import ts from "typescript";
+import { ast, query } from "@phenomnomnominal/tsquery";
 
 let functionCount = 0;
 let exportedFunctionsCount = 0;
 
 function parseSourceFile(sourceFile: ts.SourceFile) {
-  sourceFile.forEachChild((node) => {
-    if (ts.isFunctionDeclaration(node)) {
-      functionCount++;
+  const nodes = query(sourceFile, "ArrowFunction, FunctionDeclaration");
+  functionCount += nodes.length;
 
-      const hasExportSpecifier = node.modifiers?.some(
-        (v) => v.kind === ts.SyntaxKind.ExportKeyword
-      );
-
-      if (hasExportSpecifier) {
-        exportedFunctionsCount++;
-      }
-    } else if (ts.isVariableStatement(node)) {
-      node.declarationList.forEachChild((child) => {
-        if (
-          ts.isVariableDeclaration(child) &&
-          child.initializer &&
-          ts.isArrowFunction(child.initializer)
-        ) {
-          functionCount++;
-        }
-      });
-
-      const hasExportSpecifier = node.modifiers?.some(
-        (v) => v.kind === ts.SyntaxKind.ExportKeyword
-      );
-      if (hasExportSpecifier) exportedFunctionsCount++;
-    }
-  });
+  const exportedNodes = query(
+    sourceFile,
+    "FunctionDeclaration:has(ExportKeyword), VariableStatement:has(ExportKeyword) ArrowFunction"
+  );
+  exportedFunctionsCount += exportedNodes.length;
 }
 
 const host = ts.createCompilerHost({});
