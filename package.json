@@ -1,0 +1,11 @@
+{
+  "name": "ff24",
+  "module": "index.ts",
+  "type": "module",
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "scripts": {
+    "tsc": "tsc"
+  }
+}
