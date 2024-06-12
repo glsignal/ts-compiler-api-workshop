@@ -1,29 +1,60 @@
 import ts from "typescript";
 
+let functionCount = 0;
+let exportedFunctionsCount = 0;
+
+function parseSourceFile(sourceFile: ts.SourceFile) {
+  sourceFile.forEachChild((node) => {
+    if (ts.isFunctionDeclaration(node)) {
+      functionCount++;
+
+      const hasExportSpecifier = node.modifiers?.some(
+        (v) => v.kind === ts.SyntaxKind.ExportKeyword
+      );
+
+      if (hasExportSpecifier) {
+        exportedFunctionsCount++;
+      }
+    } else if (ts.isVariableStatement(node)) {
+      node.declarationList.forEachChild((child) => {
+        if (
+          ts.isVariableDeclaration(child) &&
+          child.initializer &&
+          ts.isArrowFunction(child.initializer)
+        ) {
+          functionCount++;
+        }
+      });
+
+      const hasExportSpecifier = node.modifiers?.some(
+        (v) => v.kind === ts.SyntaxKind.ExportKeyword
+      );
+      if (hasExportSpecifier) exportedFunctionsCount++;
+    }
+  });
+}
+
 const host = ts.createCompilerHost({});
 
 const program = ts.createProgram({
   host,
   rootNames: ["src/main.ts"],
   options: {
-    sourceMap: true,
-    strict: true,
-    outDir: "dist",
     module: ts.ModuleKind.ESNext,
     noEmitOnError: true,
+    outDir: "dist",
+    strict: true,
   },
 });
 
-const result = program.emit();
+const sourceFileNames = program.getRootFileNames();
 
-result.diagnostics.forEach((d) => {
-  if (d.file && d.start) {
-    const p = ts.getLineAndCharacterOfPosition(d.file, d.start);
-    const message = ts.flattenDiagnosticMessageText(d.messageText, "\n");
-    console.log(
-      `${d.file.fileName}:${p.line} (${p.character}): ${message} (ts${d.code})`
-    );
-  } else {
-    console.log(ts.flattenDiagnosticMessageText(d.messageText, "\n"));
+for (const sourceFileName of sourceFileNames) {
+  const sourceFile = program.getSourceFile(sourceFileName);
+
+  if (sourceFile) {
+    parseSourceFile(sourceFile);
   }
-});
+}
+
+console.log({ functionCount, exportedFunctionsCount });

@@ -1,4 +1,7 @@
-import { hello } from "./second";
+const add = (first: number, second: number): number => {
+  return first + second;
+};
 
-// example code lives in src/
-console.log(`Hello again ${hello} via Bun!`);
+export function sum(...numbers: number[]): number {
+  return numbers.reduce(add, 0);
+}
