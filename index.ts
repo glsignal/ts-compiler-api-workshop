@@ -2,31 +2,28 @@ import ts from "typescript";
 
 const host = ts.createCompilerHost({});
 
-const writeFile: ts.WriteFileCallback = (
-  fileName,
-  text,
-  writeByteOrderMark,
-  onError,
-  sourceFiles,
-  data
-) => {
-  console.log("Writing: ", fileName);
-};
-
-host.writeFile = writeFile;
-
 const program = ts.createProgram({
   host,
   rootNames: ["src/main.ts"],
-  options: { strict: true, outDir: "dist", module: ts.ModuleKind.ESNext },
+  options: {
+    sourceMap: true,
+    strict: true,
+    outDir: "dist",
+    module: ts.ModuleKind.ESNext,
+    noEmitOnError: true,
+  },
 });
 
-const sourceFiles = program.getRootFileNames();
+const result = program.emit();
 
-sourceFiles.forEach((f) => {
-  console.log(f);
+result.diagnostics.forEach((d) => {
+  if (d.file && d.start) {
+    const p = ts.getLineAndCharacterOfPosition(d.file, d.start);
+    const message = ts.flattenDiagnosticMessageText(d.messageText, "\n");
+    console.log(
+      `${d.file.fileName}:${p.line} (${p.character}): ${message} (ts${d.code})`
+    );
+  } else {
+    console.log(ts.flattenDiagnosticMessageText(d.messageText, "\n"));
+  }
 });
-
-const result = program.emit(undefined, writeFile);
-
-console.log(result);
