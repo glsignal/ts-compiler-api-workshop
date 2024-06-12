@@ -14,13 +14,18 @@ function typeCheckSourceFile(sourceFile: ts.SourceFile) {
   sourceFile.forEachChild((node) => {
     if (ts.isFunctionDeclaration(node)) {
       const signature = checker.getSignatureFromDeclaration(node);
-      const returnType = signature?.getReturnType();
 
-      const returnTypeString = returnType
-        ? checker.typeToString(returnType)
-        : "???";
+      signature?.getParameters().forEach((parameter) => {
+        const symbolType = checker.getTypeOfSymbol(parameter);
 
-      console.log(returnTypeString);
+        symbolType.getProperties().forEach((property) => {
+          console.log(
+            `Field '${property.name}' is type '${checker.typeToString(
+              checker.getTypeOfSymbol(property)
+            )}'`
+          );
+        });
+      });
     }
   });
 }

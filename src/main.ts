@@ -1,5 +1,5 @@
-export function hello(text?: string) {
-  console.log(`Hello, ${text ?? "World!"}`);
+import { type Props } from "./types";
 
-  return 6;
+export function hello(props: Props) {
+  const x = props.a;
 }
