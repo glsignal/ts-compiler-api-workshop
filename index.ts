@@ -1,27 +1,29 @@
 import ts from "typescript";
-import { ast, query } from "@phenomnomnominal/tsquery";
 
-function isNaNIdentifier(node: ts.Node): boolean {
-  return ts.isIdentifier(node) && node.escapedText === "NaN";
-}
+function printCode(...nodes: ts.Statement[]) {
+  const resultFile = ts.createSourceFile(
+    "./source.ts",
+    "",
+    ts.ScriptTarget.Latest,
+    false,
+    ts.ScriptKind.TSX
+  );
 
-function checkNode(sourceFile: ts.SourceFile, node: ts.Node) {
-  if (
-    ts.isBinaryExpression(node) &&
-    (isNaNIdentifier(node.left) || isNaNIdentifier(node.right))
-  ) {
-    const position = ts.getLineAndCharacterOfPosition(sourceFile, node.pos);
-    console.log(
-      "Warning: expressions with NaN should use `isNaN`\n" +
-        `  ${sourceFile.fileName}:${position.line}: "${node.getText(
-          sourceFile
-        )}"\n`
-    );
-  } else node.forEachChild((child) => checkNode(sourceFile, child));
-}
+  const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
 
-function parseSourceFile(sourceFile: ts.SourceFile) {
-  checkNode(sourceFile, sourceFile);
+  const sourceFile = ts.factory.createSourceFile(
+    nodes,
+    ts.factory.createToken(ts.SyntaxKind.EndOfFileToken),
+    ts.NodeFlags.None
+  );
+
+  const result = printer.printNode(
+    ts.EmitHint.Unspecified,
+    sourceFile,
+    resultFile
+  );
+
+  console.log(result);
 }
 
 const host = ts.createCompilerHost({});
@@ -37,12 +39,68 @@ const program = ts.createProgram({
   },
 });
 
-const sourceFileNames = program.getRootFileNames();
+// const a = 17;
+const variable = ts.factory.createVariableStatement(
+  undefined,
+  ts.factory.createVariableDeclarationList(
+    [
+      ts.factory.createVariableDeclaration(
+        ts.factory.createIdentifier("a"),
+        undefined,
+        undefined,
+        ts.factory.createNumericLiteral("17")
+      ),
+    ],
+    ts.NodeFlags.Const
+  )
+);
 
-for (const sourceFileName of sourceFileNames) {
-  const sourceFile = program.getSourceFile(sourceFileName);
+// function hello() {
+//   const array = ['h', 'e', 'l', 'l', 'o'];
+//   return array.join(',');
+// }
+const hello = ts.factory.createFunctionDeclaration(
+  undefined,
+  undefined,
+  ts.factory.createIdentifier("hello"),
+  undefined,
+  [],
+  undefined,
+  ts.factory.createBlock(
+    [
+      ts.factory.createVariableStatement(
+        undefined,
+        ts.factory.createVariableDeclarationList(
+          [
+            ts.factory.createVariableDeclaration(
+              ts.factory.createIdentifier("array"),
+              undefined,
+              undefined,
+              ts.factory.createArrayLiteralExpression([
+                ts.factory.createStringLiteral("h", true),
+                ts.factory.createStringLiteral("e", true),
+                ts.factory.createStringLiteral("l", true),
+                ts.factory.createStringLiteral("l", true),
+                ts.factory.createStringLiteral("o", true),
+              ])
+            ),
+          ],
+          ts.NodeFlags.Const
+        )
+      ),
+      ts.factory.createReturnStatement(
+        ts.factory.createCallExpression(
+          ts.factory.createPropertyAccessExpression(
+            ts.factory.createIdentifier("array"),
+            ts.factory.createIdentifier("join")
+          ),
+          undefined,
+          [ts.factory.createStringLiteral(",", true)]
+        )
+      ),
+    ],
+    true
+  )
+);
 
-  if (sourceFile) {
-    parseSourceFile(sourceFile);
-  }
-}
+printCode(variable, hello);
