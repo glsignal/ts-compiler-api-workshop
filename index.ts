@@ -1,18 +1,27 @@
 import ts from "typescript";
 import { ast, query } from "@phenomnomnominal/tsquery";
 
-let functionCount = 0;
-let exportedFunctionsCount = 0;
+function isNaNIdentifier(node: ts.Node): boolean {
+  return ts.isIdentifier(node) && node.escapedText === "NaN";
+}
+
+function checkNode(sourceFile: ts.SourceFile, node: ts.Node) {
+  if (
+    ts.isBinaryExpression(node) &&
+    (isNaNIdentifier(node.left) || isNaNIdentifier(node.right))
+  ) {
+    const position = ts.getLineAndCharacterOfPosition(sourceFile, node.pos);
+    console.log(
+      "Warning: expressions with NaN should use `isNaN`\n" +
+        `  ${sourceFile.fileName}:${position.line}: "${node.getText(
+          sourceFile
+        )}"\n`
+    );
+  } else node.forEachChild((child) => checkNode(sourceFile, child));
+}
 
 function parseSourceFile(sourceFile: ts.SourceFile) {
-  const nodes = query(sourceFile, "ArrowFunction, FunctionDeclaration");
-  functionCount += nodes.length;
-
-  const exportedNodes = query(
-    sourceFile,
-    "FunctionDeclaration:has(ExportKeyword), VariableStatement:has(ExportKeyword) ArrowFunction"
-  );
-  exportedFunctionsCount += exportedNodes.length;
+  checkNode(sourceFile, sourceFile);
 }
 
 const host = ts.createCompilerHost({});
@@ -37,5 +46,3 @@ for (const sourceFileName of sourceFileNames) {
     parseSourceFile(sourceFile);
   }
 }
-
-console.log({ functionCount, exportedFunctionsCount });
